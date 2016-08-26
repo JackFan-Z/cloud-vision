@@ -48,11 +48,13 @@ import com.google.api.services.vision.v1.model.BatchAnnotateImagesResponse;
 import com.google.api.services.vision.v1.model.EntityAnnotation;
 import com.google.api.services.vision.v1.model.Feature;
 import com.google.api.services.vision.v1.model.Image;
+import com.google.api.services.vision.v1.model.ImageContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -67,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView mImageDetails;
     private ImageView mMainImage;
+    private long startTimeMS;
+    private float uploadDurationSec;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -159,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void uploadImage(Uri uri) {
+        startTimeMS = System.currentTimeMillis();
         if (uri != null) {
             try {
                 // scale the image to save on bandwidth
@@ -217,7 +222,7 @@ public class MainActivity extends AppCompatActivity {
                         // add the features we want
                         annotateImageRequest.setFeatures(new ArrayList<Feature>() {{
                             Feature labelDetection = new Feature();
-                            labelDetection.setType("LABEL_DETECTION");
+                            labelDetection.setType("TEXT_DETECTION");
                             labelDetection.setMaxResults(10);
                             add(labelDetection);
                         }});
@@ -232,7 +237,9 @@ public class MainActivity extends AppCompatActivity {
                     annotateRequest.setDisableGZipContent(true);
                     Log.d(TAG, "created Cloud Vision request object, sending request");
 
+                    long sendMS = System.currentTimeMillis();
                     BatchAnnotateImagesResponse response = annotateRequest.execute();
+                    uploadDurationSec = (System.currentTimeMillis() - sendMS) / 1000f;
                     return convertResponseToString(response);
 
                 } catch (GoogleJsonResponseException e) {
@@ -271,18 +278,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String convertResponseToString(BatchAnnotateImagesResponse response) {
-        String message = "I found these things:\n\n";
+        long spentMS = System.currentTimeMillis() - startTimeMS;
+        String message = "Recognition results:\n";
+        StringBuilder builder = new StringBuilder(message);
+        builder.append(String.format("(Total spent %.2f secs, including %.2f secs for upload)\n\n", spentMS / 1000f, uploadDurationSec));
 
-        List<EntityAnnotation> labels = response.getResponses().get(0).getLabelAnnotations();
+        List<EntityAnnotation> labels = response.getResponses().get(0).getTextAnnotations();
+        Log.i("JackTest", "total labels:" + labels.size());
         if (labels != null) {
-            for (EntityAnnotation label : labels) {
-                message += String.format("%.3f: %s", label.getScore(), label.getDescription());
-                message += "\n";
+            for (int i = 0; i < labels.size(); i++ ) {
+                EntityAnnotation label = labels.get(i);
+                if (i == 0) {
+                    builder.append("Locale: ");
+                    builder.append(label.getLocale());
+                }
+                builder.append(label.getDescription());
+                builder.append("\n");
+                //TODO: Draw rectangles later
+                break;
             }
         } else {
-            message += "nothing";
+            builder.append("nothing");
         }
 
-        return message;
+        return builder.toString();
     }
 }
