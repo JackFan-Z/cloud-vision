@@ -1,2 +1,10 @@
 # Service account JSON key, used in Travis
 client-secret.json
+
+# Gradle files
+.gradle/
+build/
+
+# Android Studio
+.idea
+*.iml
