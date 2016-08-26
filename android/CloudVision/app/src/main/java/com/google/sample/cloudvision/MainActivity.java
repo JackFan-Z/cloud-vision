@@ -227,6 +227,11 @@ public class MainActivity extends AppCompatActivity {
                             add(labelDetection);
                         }});
 
+                        ImageContext imageContext = new ImageContext();
+                        String [] languages = { "zh-TW" };
+                        imageContext.setLanguageHints(Arrays.asList(languages));
+                        annotateImageRequest.setImageContext(imageContext);
+
                         // Add the list of one thing to the request
                         add(annotateImageRequest);
                     }});
